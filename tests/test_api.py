@@ -9,6 +9,7 @@ API route tests for Flask endpoints:
 import io
 import os
 import unittest
+from unittest.mock import patch
 from app import app
 
 class TestAPIEndpoints(unittest.TestCase):
@@ -57,6 +58,22 @@ class TestAPIEndpoints(unittest.TestCase):
             self.assertEqual(res["pagination"]["limit"], 1)
             self.assertEqual(res["pagination"]["totalCount"], 2)
             self.assertEqual(len(res["data"]), 1)
+
+    def test_get_saved_documents(self):
+        with patch("app.get_mongo_collection") as mongo_collection:
+            mock_client = object()
+            mock_collection = type("MockCollection", (), {})()
+            mock_collection.find = lambda *args, **kwargs: [
+                {"consignment_number": "QM122475425IN"},
+                {"consignment_number": "QM122476960IN"},
+            ]
+            mongo_collection.return_value = (mock_client, mock_collection)
+
+            resp = self.client.get("/api/get")
+            self.assertEqual(resp.status_code, 200)
+            res = resp.get_json()
+            self.assertTrue(res["success"])
+            self.assertEqual(len(res["data"]), 2)
 
 if __name__ == "__main__":
     unittest.main()
